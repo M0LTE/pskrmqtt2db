@@ -41,8 +41,10 @@ internal class SpotRecorder : ISpotRecorder
         if (spot.SenderGrid == spot.ReceiverGrid) return;
         var distance = MaidenheadLocator.Distance(spot.ReceiverGrid, spot.SenderGrid);
 
+        var minute = new DateTime(spot.Received.Year, spot.Received.Month, spot.Received.Day, spot.Received.Hour, spot.Received.Minute, 0, DateTimeKind.Utc);
+
         using var conn = await dbConnectionFactory.GetWriteConnection();
-        await conn.ExecuteAsync("INSERT INTO pskr.distances (timestamp, band, grid, distance) VALUES (@timestamp, @band, @grid1, @distance), (@timestamp, @band, @grid2, @distance);", new { timestamp = spot.Received, band = spot.Band, grid1 = spot.SenderGrid, grid2 = spot.ReceiverGrid, distance });
+        await conn.ExecuteAsync("INSERT INTO pskr.distances (timestamp, band, grid, distance, minute) VALUES (@timestamp, @band, @grid1, @distance, @minute), (@timestamp, @band, @grid2, @distance, @minute);", new { timestamp = spot.Received, band = spot.Band, grid1 = spot.SenderGrid, grid2 = spot.ReceiverGrid, distance, minute });
 
         // for both grids: 
         // band, grid, distance
