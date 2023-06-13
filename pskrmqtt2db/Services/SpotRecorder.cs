@@ -1,4 +1,6 @@
-﻿using pskrmqtt2db.Models;
+﻿using Dapper;
+using MaidenheadLib;
+using pskrmqtt2db.Models;
 using System.Diagnostics;
 using System.Threading.Tasks.Dataflow;
 
@@ -28,10 +30,24 @@ internal class SpotRecorder : ISpotRecorder
 
     public async Task QueueForSave(Spot spot)
     {
-        if (!await spotBatcher.SendAsync(spot))
-        {
-            Debugger.Break();
-        }
+        await Aggregate(spot);
+
+        await spotBatcher.SendAsync(spot);
+    }
+
+    private async Task Aggregate(Spot spot)
+    {
+        if (spot.Mode != "FT8") return;
+        if (spot.SenderGrid == spot.ReceiverGrid) return;
+        var distance = MaidenheadLocator.Distance(spot.ReceiverGrid, spot.SenderGrid);
+
+        using var conn = await dbConnectionFactory.GetWriteConnection();
+        await conn.ExecuteAsync("INSERT INTO pskr.distances (timestamp, band, grid, distance) VALUES (@timestamp, @band, @grid1, @distance), (@timestamp, @band, @grid2, @distance);", new { timestamp = spot.Received, band = spot.Band, grid1 = spot.SenderGrid, grid2 = spot.ReceiverGrid, distance });
+
+        // for both grids: 
+        // band, grid, distance
+
+
     }
 
     private async Task Save(Spot[] spots)
