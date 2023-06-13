@@ -14,7 +14,7 @@ internal class SpotRecorder : ISpotRecorder
     private readonly ILogger<SpotRecorder> logger;
     private readonly DbConnectionFactory dbConnectionFactory;
     private readonly BatchBlock<Spot> spotBatcher;
-    private ActionBlock<Spot[]> spotInserter;
+    private readonly ActionBlock<Spot[]> spotInserter;
 
     public SpotRecorder(ILogger<SpotRecorder> logger, DbConnectionFactory dbConnectionFactory, IConfiguration config)
     {
