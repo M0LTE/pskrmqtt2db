@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-pskrmqtt2db-7c257412-e112-4b7e-af85-84fc50ff7038</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.0.123" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
+    <PackageReference Include="MQTTnet.Extensions.ManagedClient" Version="4.2.1.781" />
+    <PackageReference Include="MySqlConnector" Version="2.2.6" />
+  </ItemGroup>
+</Project>
