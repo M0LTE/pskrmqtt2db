@@ -5,6 +5,7 @@ IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
     {
         services.AddHostedService<PskrFeedService>();
+        services.AddHostedService<DbPurgeService>();
         services.AddSingleton<ISpotRecorder, SpotRecorder>();
         services.Configure<DbConfig>(context.Configuration.GetSection("Database"));
         services.AddSingleton<DbConnectionFactory>();
