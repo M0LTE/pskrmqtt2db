@@ -35,21 +35,21 @@ internal class SpotRecorder : ISpotRecorder
 
     private async Task Save(Spot[] spots)
     {
-        logger.LogInformation($"Save {spots.Length} spots");
-
         using var conn = await dbConnectionFactory.GetWriteConnection();
 
         try
         {
+            var sw = Stopwatch.StartNew();
             await conn.BulkInsert(
                 "pskr.spots",
                 new[] { "seq", "senderCall", "receiverCall", "senderGrid", "receiverGrid", "senderEntity", "receiverEntity", "received", "band", "mode" },
                 spots);
+            sw.Stop();
+            logger.LogInformation($"Saved {spots.Length} spots in {sw.ElapsedMilliseconds:0}ms");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "While inserting to DB");
-            throw;
+            logger.LogError(ex, "Caught while inserting to DB");
         }
 
         /*await conn.ExecuteAsync("INSERT INTO pskr.spots (seq, senderCall, receiverCall, senderGrid, receiverGrid, senderEntity, receiverEntity, received, band, mode) " +
