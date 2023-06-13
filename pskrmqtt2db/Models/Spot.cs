@@ -2,14 +2,14 @@
 
 public class Spot
 {
-    public required ulong Seq { get; set; }
-    public required DateTime Received { get; set; }
-    public required string Band { get; set; }
-    public required string Mode { get; set; }
-    public required string SenderCall { get; set; }
-    public required string ReceiverCall { get; set; }
-    public required string SenderGrid { get; set; }
-    public required string ReceiverGrid { get; set; }
-    public required int SenderEntity { get; set; }
-    public required int ReceiverEntity { get; set; }
+    public ulong Seq { get; set; }
+    public DateTime Received { get; set; }
+    public string Band { get; set; }
+    public string Mode { get; set; }
+    public string SenderCall { get; set; }
+    public string ReceiverCall { get; set; }
+    public string SenderGrid { get; set; }
+    public string ReceiverGrid { get; set; }
+    public int SenderEntity { get; set; }
+    public int ReceiverEntity { get; set; }
 }
