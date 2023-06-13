@@ -13,12 +13,13 @@ internal class SpotRecorder : ISpotRecorder
 {
     private readonly ILogger<SpotRecorder> logger;
     private readonly DbConnectionFactory dbConnectionFactory;
-    private readonly BatchBlock<Spot> spotBatcher = new(1000);
+    private readonly BatchBlock<Spot> spotBatcher;
     private ActionBlock<Spot[]> spotInserter;
 
-    public SpotRecorder(ILogger<SpotRecorder> logger, DbConnectionFactory dbConnectionFactory)
+    public SpotRecorder(ILogger<SpotRecorder> logger, DbConnectionFactory dbConnectionFactory, IConfiguration config)
     {
         spotInserter = new ActionBlock<Spot[]>(Save);
+        spotBatcher = new(config.GetValue<int>("BatchSize"));
         spotBatcher.LinkTo(spotInserter);
         spotBatcher.Completion.ContinueWith(delegate { spotInserter.Complete(); });
         this.logger = logger;
