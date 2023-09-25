@@ -43,43 +43,45 @@ namespace pskrmqtt2db.Services
             var s = arg.ApplicationMessage.ConvertPayloadToString();
 
             // {"sq":37386122735,"f":28076105,"md":"FT8","rp":-18,"t":1686662651,"sc":"AA1K","sl":"FM29GA","rc":"K0XMG","rl":"EM17GR","sa":291,"ra":291,"b":"10m"}
+            // {"sq":39732280668,"f":10136719,"md":"FT8","rp":3,"t":1695669839,"sc":"IU2BYL","sl":"JN45PI","rc":"SP7IWA","rl":"KO02jd58","sa":248,"ra":269,"b":"30m"}
 
-            var n = JsonNode.Parse(s);
-            var t = n!["t"]!.GetValue<ulong>();
-            var sq = n!["sq"]!.GetValue<ulong>();
+            var node = JsonNode.Parse(s);
+            var time = node!["t"]!.GetValue<ulong>();
+            var sequence = node!["sq"]!.GetValue<ulong>();
+            var report = node!["rp"]?.GetValue<int?>();
+            var senderLocator = node!["sl"]?.GetValue<string?>();
+            var receiverLocator = node!["rl"]?.GetValue<string?>();
+            var frequency = node!["f"]?.GetValue<ulong?>();
 
-            var received = DateTime.UnixEpoch.AddSeconds(t);
+            var topicParts = arg.ApplicationMessage.Topic.Split('/');
 
-            var parts = arg.ApplicationMessage.Topic.Split('/');
-
-            if (parts.Length != 11)
+            if (topicParts.Length != 11)
             {
-                Debugger.Break();
-            }
-
-            if (parts.Any(p => p.Length == 0))
-            {
-                Debugger.Break();
+                return;
             }
 
             var spot = new Models.Spot
             {
-                Seq = sq,
-                Received = received,
-                Band = Normalise(parts[3]),
-                Mode = Normalise(parts[4]),
-                SenderCall = Normalise(parts[5]).Replace(".", "/"),
-                ReceiverCall = Normalise(parts[6]).Replace(".", "/"),
-                SenderGrid = Normalise(parts[7]),
-                ReceiverGrid = Normalise(parts[8]),
-                SenderEntity = int.Parse(parts[9]),
-                ReceiverEntity = int.Parse(parts[10])
+                Seq = sequence,
+                Received = DateTime.UnixEpoch.AddSeconds(time),
+                Band = topicParts[3],
+                Mode = Normalise(topicParts[4]),
+                SenderCall = Normalise(topicParts[5])?.Replace(".", "/"),
+                ReceiverCall = Normalise(topicParts[6])?.Replace(".", "/"),
+                SenderGridFull = Normalise(senderLocator),
+                SenderGrid = Normalise(topicParts[7]),
+                ReceiverGridFull = Normalise(receiverLocator),
+                ReceiverGrid = Normalise(topicParts[8]),
+                SenderEntity = int.Parse(topicParts[9]),
+                ReceiverEntity = int.Parse(topicParts[10]),
+                Report = report,
+                Frequency = frequency
             };
 
             await spotRecorder.QueueForSave(spot);
         }
 
-        private static string Normalise(string v) => v.Trim().ToUpperInvariant();
+        private static string? Normalise(string? v) => v?.Trim()?.ToUpperInvariant();
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {

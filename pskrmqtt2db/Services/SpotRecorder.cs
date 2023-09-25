@@ -30,7 +30,7 @@ internal class SpotRecorder : ISpotRecorder
 
     public async Task QueueForSave(Spot spot)
     {
-        await Aggregate(spot);
+        //await Aggregate(spot);
 
         await spotBatcher.SendAsync(spot);
     }
@@ -61,7 +61,7 @@ internal class SpotRecorder : ISpotRecorder
             var sw = Stopwatch.StartNew();
             await conn.BulkInsert(
                 "pskr.spots",
-                new[] { "seq", "senderCall", "receiverCall", "senderGrid", "receiverGrid", "senderEntity", "receiverEntity", "received", "band", "mode" },
+                new[] { "seq", "senderCall", "receiverCall", "senderGrid", "receiverGrid", "senderGridFull", "receiverGridFull", "senderEntity", "receiverEntity", "received", "band", "frequency", "mode", "report", "distance" },
                 spots);
             sw.Stop();
             logger.LogInformation($"Saved {spots.Length} spots in {sw.ElapsedMilliseconds:0}ms");
@@ -70,8 +70,5 @@ internal class SpotRecorder : ISpotRecorder
         {
             logger.LogError(ex, "Caught while inserting to DB");
         }
-
-        /*await conn.ExecuteAsync("INSERT INTO pskr.spots (seq, senderCall, receiverCall, senderGrid, receiverGrid, senderEntity, receiverEntity, received, band, mode) " +
-            "VALUES (@seq, @senderCall, @receiverCall, @senderGrid, @receiverGrid, @senderEntity, @receiverEntity, @received, @band, @mode);", spots);*/
     }
 }
