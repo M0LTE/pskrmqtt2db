@@ -27,7 +27,7 @@ namespace pskrmqtt2db.Services
                 .WithAutoReconnectDelay(TimeSpan.FromSeconds(1))
                 .WithClientOptions(
                     new MqttClientOptionsBuilder()
-                        .WithClientId("pskrmqtt2db")
+                        .WithClientId("pskrmqtt2db-" + Guid.NewGuid())
                         .WithTcpServer("mqtt.pskreporter.info")
                         .Build())
                 .Build();
