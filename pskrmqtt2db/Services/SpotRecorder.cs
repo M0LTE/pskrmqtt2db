@@ -1,7 +1,7 @@
-﻿using Dapper;
-using MaidenheadLib;
-using pskrmqtt2db.Models;
+﻿using pskrmqtt2db.Models;
 using System.Diagnostics;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks.Dataflow;
 
 namespace pskrmqtt2db.Services;
@@ -18,10 +18,13 @@ internal class SpotRecorder : ISpotRecorder
     private readonly BatchBlock<Spot> spotBatcher;
     private readonly ActionBlock<Spot[]> spotInserter;
 
+    private int batchSize;
+
     public SpotRecorder(ILogger<SpotRecorder> logger, DbConnectionFactory dbConnectionFactory, IConfiguration config)
     {
+        batchSize = config.GetValue<int>("BatchSize");
         spotInserter = new ActionBlock<Spot[]>(Save);
-        spotBatcher = new(config.GetValue<int>("BatchSize"));
+        spotBatcher = new(batchSize);
         spotBatcher.LinkTo(spotInserter);
         spotBatcher.Completion.ContinueWith(delegate { spotInserter.Complete(); });
         this.logger = logger;
@@ -30,26 +33,56 @@ internal class SpotRecorder : ISpotRecorder
 
     public async Task QueueForSave(Spot spot)
     {
-        //await Aggregate(spot);
+        var t1 = spotBatcher.SendAsync(spot);
+        Write(spot);
+        if (!await t1)
+        {
+            logger.LogWarning("Throwing away data...");
+        }
 
-        await spotBatcher.SendAsync(spot);
+        if (spotInserter.InputCount > batchSize)
+        {
+            logger.LogWarning("Falling behind...");
+        }
     }
 
-    private async Task Aggregate(Spot spot)
+    const string rootPath = "/data/pskr";
+    private static bool notExist = false;
+
+    private static void Write(Spot spot)
     {
-        if (spot.Mode != "FT8") return;
-        if (spot.SenderGrid == spot.ReceiverGrid) return;
-        var distance = MaidenheadLocator.Distance(spot.ReceiverGrid, spot.SenderGrid);
+        if (notExist) return;
 
-        var minute = new DateTime(spot.Received.Year, spot.Received.Month, spot.Received.Day, spot.Received.Hour, spot.Received.Minute, 0, DateTimeKind.Utc);
+        if (!Directory.Exists(rootPath))
+        {
+            notExist = true;
+            return;
+        }
 
-        using var conn = await dbConnectionFactory.GetWriteConnection();
-        await conn.ExecuteAsync("INSERT INTO pskr.distances (timestamp, band, grid, distance, minute) VALUES (@timestamp, @band, @grid1, @distance, @minute), (@timestamp, @band, @grid2, @distance, @minute);", new { timestamp = spot.Received, band = spot.Band, grid1 = spot.SenderGrid, grid2 = spot.ReceiverGrid, distance, minute });
+        if (spot == null || string.IsNullOrWhiteSpace(spot.Band) || string.IsNullOrWhiteSpace(spot.Mode))
+        {
+            return;
+        }
 
-        // for both grids: 
-        // band, grid, distance
+        var path = Path.Combine(rootPath, $"{spot.Received.Year}-{spot.Received.Month:00}", spot.Received.Day.ToString("00"), spot.Band);
 
+        if (!Directory.Exists(path))
+        {
+            Directory.CreateDirectory(path);
+        }
 
+        var spotJson = JsonSerializer.Serialize(spot, new JsonSerializerOptions
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            WriteIndented = false
+        });
+
+        if (Debugger.IsAttached && (spotJson.Contains('\r') || spotJson.Contains('\n')))
+        {
+            Debugger.Break();
+        }
+
+        File.AppendAllText(Path.Combine(path, spot.Mode) + ".jsonl", spotJson + "\n");
     }
 
     private async Task Save(Spot[] spots)
